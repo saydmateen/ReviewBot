@@ -11,48 +11,59 @@ class ReviewBot {
     this.needReviewExpr = /^((what\ *)?needs)?\ *review(ing)?\?$/g;
     this.addReviewExpr = /^review (.+) (reject|fail|pass) (.+)$/g; 
   }
-
-  handleMessage(message) {
+  
+  determineAction(message) {
     // Reset REGEX
     this.needReviewExpr.lastIndex = 0;
     this.addReviewExpr.lastIndex = 0;
 
     // Determine which command was given
     if (this.needReviewExpr.test(message)) {
-      // Log Intent
-      this.bot.postMessageToChannel(Config.CHANNEL_NAME,
-        'Showing tickets that need reviewing!');
+      // Query JIRA & Mongo
+      this.showNeedsReview();
     } else if (this.addReviewExpr.test(message)) {
-      // Reset Regex and get Matches
       this.addReviewExpr.lastIndex = 0;
       const matches = this.addReviewExpr.exec(message);
-      // Determine pass or fail
+      const ticket = matches[1];
       const pass = matches[2].toLowerCase() == 'pass';
-      // Log Matches
-      this.bot.postMessageToChannel(Config.CHANNEL_NAME,
-        `Adding ${pass?'Acceptance':'Rejection'} to ${matches[1]} with comment: ${matches[3]}`);
+      const comment = matches[3];
+      // Add Review to JIRA & Mongo
+      this.addReview(ticket, pass, comment);
     } else {
-      // Log Intent
-      this.bot.postMessageToChannel(Config.CHANNEL_NAME,
-        'Unrecognized message...');
+      // Command not Recognized
+      this.bot.postMessageToChannel(Config.CHANNEL_NAME, 'Unrecognized message...');
     }
   }
 
+  showNeedsReview() {
+    this.bot.postMessageToChannel(Config.CHANNEL_NAME,
+      'Showing tickets that need reviewing!');
+    // TODO: JIRA API get applicable tickets
+    // project = BPY AND status = "Code Review" AND resolution = Unresolved
+  }
+
+  addReview(ticket, pass, comment) {
+    // Log Intent
+    this.bot.postMessageToChannel(Config.CHANNEL_NAME,
+      `Adding ${pass?'Acceptance':'Rejection'} to ${ticket} with comment: ${comment}`);
+    // TODO: JIRA API Create Applicable comment
+  }
+
+
+
   start() {
     var self = this;
-
     // Boot Message
     this.bot.on('start', function() {
       self.bot.postMessageToChannel(Config.CHANNEL_NAME, 'Hello Friends!');
     });
-
     // Message Handler
     this.bot.on('message', function(data) {
       if (data.type === 'message' &&
           data.channel === Config.CHANNEL &&
           data.bot_id !== Config.BOT_ID) {
 
-        self.handleMessage(data.text);
+        self.determineAction(data.text);
       }
     })
   }
