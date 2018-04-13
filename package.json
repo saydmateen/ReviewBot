@@ -1,0 +1,16 @@
+{
+  "name": "slackathon",
+  "version": "1.0.0",
+  "description": "slackathon bot",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://spencermcw@bitbucket.org/spencermcw/slackathon.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "homepage": "https://bitbucket.org/spencermcw/slackathon#readme"
+}
