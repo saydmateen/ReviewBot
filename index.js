@@ -1,4 +1,8 @@
-const ReviewBot = require('./ReviewBot');
+const SlackBot = require('slackbots');
+const Config = require('./config');
 
-const bot = new ReviewBot();
-bot.start();
+// create a bot
+var bot = new SlackBot({
+    token: Config.BOT_TOKEN,
+    name: Config.BOT_NAME
+});
