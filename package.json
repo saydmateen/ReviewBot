@@ -12,5 +12,8 @@
   },
   "author": "",
   "license": "ISC",
-  "homepage": "https://bitbucket.org/spencermcw/slackathon#readme"
+  "homepage": "https://bitbucket.org/spencermcw/slackathon#readme",
+  "dependencies": {
+    "slackbots": "^1.1.0"
+  }
 }
