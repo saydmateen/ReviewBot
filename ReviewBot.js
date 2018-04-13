@@ -13,15 +13,26 @@ class ReviewBot {
   }
 
   handleMessage(message) {
-    console.log(`Handling: '${message}'`);
+    // Reset REGEX
+    this.needReviewExpr.lastIndex = 0;
+    this.addReviewExpr.lastIndex = 0;
 
+    // Determine which command was given
     if (this.needReviewExpr.test(message)) {
+      // Log Intent
       this.bot.postMessageToChannel(Config.CHANNEL_NAME,
         'Showing tickets that need reviewing!');
     } else if (this.addReviewExpr.test(message)) {
+      // Reset Regex and get Matches
+      this.addReviewExpr.lastIndex = 0;
+      const matches = this.addReviewExpr.exec(message);
+      // Determine pass or fail
+      const pass = matches[2].toLowerCase() == 'pass';
+      // Log Matches
       this.bot.postMessageToChannel(Config.CHANNEL_NAME,
-        'Adding review to ticket!');
+        `Adding ${pass?'Acceptance':'Rejection'} to ${matches[1]} with comment: ${matches[3]}`);
     } else {
+      // Log Intent
       this.bot.postMessageToChannel(Config.CHANNEL_NAME,
         'Unrecognized message...');
     }
@@ -32,7 +43,7 @@ class ReviewBot {
 
     // Boot Message
     this.bot.on('start', function() {
-      self.bot.postMessageToChannel('review_bot', 'Hello Friends!');
+      self.bot.postMessageToChannel(Config.CHANNEL_NAME, 'Hello Friends!');
     });
 
     // Message Handler
