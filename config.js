@@ -1,4 +1,6 @@
 const config = {
+  IP: '10.247.182.171',
+  ISSUE_URL: 'https://jira.powerschool.com/browse',
   BOT_TOKEN: 'xoxb-345920159488-rUEGeiKWjj7glhr83Sqeiw1e',
   BOT_NAME: 'slackathon',
   BOT_ID: 'BA6F5JKBM',

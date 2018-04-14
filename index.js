@@ -1,12 +1,23 @@
-const SlackBot = require('slackbots');
-const Config = require('./config');
+const ReviewBot = require('./ReviewBot');
+const express = require('express');
+const app = express();
 
-// create a bot
-var bot = new SlackBot({
-    token: Config.BOT_TOKEN,
-    name: Config.BOT_NAME
+
+// Routing
+app.post('/action', function(req,res) {
+  console.log('Reciving an action.');
 });
 
-JiraService = require('./services/jiraService');
+app.post('/options', function(req, res) {
+  console.log('Receiving request for options.');
+});
 
-JiraService.NeedsReview();
+
+// Setup Slack Bot
+const bot = new ReviewBot();
+bot.start();
+
+// Listen for Interactions
+app.listen(3000, function() {
+  console.log('Listening on 3000');
+});

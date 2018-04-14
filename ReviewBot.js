@@ -1,3 +1,4 @@
+const JiraService = require('../services/JiraService')
 const SlackBot = require('slackbots');
 const Config = require('./config');
 
@@ -11,7 +12,7 @@ class ReviewBot {
     this.needReviewExpr = /^((what\ *)?needs)?\ *review(ing)?\?$/g;
     this.addReviewExpr = /^review (.+) (reject|fail|pass) (.+)$/g; 
   }
-  
+
   determineAction(message) {
     // Reset REGEX
     this.needReviewExpr.lastIndex = 0;
@@ -38,8 +39,27 @@ class ReviewBot {
   showNeedsReview() {
     this.bot.postMessageToChannel(Config.CHANNEL_NAME,
       'Showing tickets that need reviewing!');
-    // TODO: JIRA API get applicable tickets
-    // project = BPY AND status = "Code Review" AND resolution = Unresolved
+    // const reviews = JiraService.NeedsReview();
+    const reviews = [
+      {
+        "key": "BPY-8",
+        "accepted": 1,
+        "rejected": 2 
+      },
+      {
+        "key": "BPY-7",
+        "accepted": 0,
+        "rejected": 1 
+      }
+    ];
+
+    var messages = [];
+    reviews.slice(0,10).map(review => {
+      var message = `<${Config.ISSUE_URL}/${review.key}|${review.key}> : A:${review.accepted} R:${review.rejected}`;
+      messages.push(message);
+    });
+
+    this.bot.postMessageToChannel(Config.CHANNEL_NAME, null, {text:messages.join('\n')});
   }
 
   addReview(ticket, pass, comment) {
@@ -55,6 +75,7 @@ class ReviewBot {
     var self = this;
     // Boot Message
     this.bot.on('start', function() {
+      console.log(`${Config.BOT_NAME} bot started...`);
       self.bot.postMessageToChannel(Config.CHANNEL_NAME, 'Hello Friends!');
     });
     // Message Handler

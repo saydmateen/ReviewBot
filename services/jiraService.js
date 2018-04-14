@@ -1,5 +1,6 @@
-var config = require('../config');
-var axios = require('axios');
+const config = require('../config');
+const axios = require('axios');
+
 var comment = [];
 function NeedsReview() {
     var jql = "project = " + config.PROJECT + " AND status = " + config.STATUS + " AND resolution = Unresolved&fields=key";
