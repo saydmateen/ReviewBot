@@ -6,3 +6,7 @@ var bot = new SlackBot({
     token: Config.BOT_TOKEN,
     name: Config.BOT_NAME
 });
+
+JiraService = require('./services/jiraService');
+
+JiraService.NeedsReview();
