@@ -14,7 +14,9 @@ const bot = new ReviewBot.Bot();
 const Jira = require('./services/Jira');
 
 const config = require('./config');
-const urlencodedParser = bodyParser.urlencoded({ extended: false });
+const urlencodedParser = bodyParser.urlencoded({
+  extended: false
+});
 
 
 /* Routing */
@@ -45,11 +47,11 @@ app.post('/slash/r-new', urlencodedParser, (req, res) => {
   bot.handleRequest(req, res, bot.actions.NEW_REVIEW);
 });
 // Display tickets under review
-app.post('/slash/r-all', urlencodedParser, (req,res) => {
+app.post('/slash/r-all', urlencodedParser, (req, res) => {
   bot.handleRequest(req, res, bot.actions.NEEDS_REVIEW);
 })
 // Display my tickets under review
-app.post('/slash/r-mine', urlencodedParser, (req,res) => {
+app.post('/slash/r-mine', urlencodedParser, (req, res) => {
   bot.handleRequest(req, res, bot.actions.MY_TICKETS);
 })
 // Move tickets with the necessary number of passes

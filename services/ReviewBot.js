@@ -60,7 +60,7 @@ exports.Bot = class ReviewBot {
       case this.actions.MY_TICKETS:
         this.showTickets(payload, responseURL, action);
         break;
-      // When a user responds to a question
+        // When a user responds to a question
       case this.actions.USER_RESPONSE:
         payload = JSON.parse(payload.payload);
         this.userResponse(payload, payload.response_url);
@@ -88,7 +88,8 @@ exports.Bot = class ReviewBot {
         ticketPromise = Jira.getTicketsUnderReview;
         sFilter = "all";
         break;
-      case this.actions.MY_TICKETS: ticketPromise = Jira.getMyTickets;
+      case this.actions.MY_TICKETS:
+        ticketPromise = Jira.getMyTickets;
         sFilter = "your";
         break;
       default:
@@ -143,32 +144,27 @@ exports.Bot = class ReviewBot {
     // Formulate Message
     return {
       "text": "Here are the requested tickets under review!",
-      "attachments": [
-        {
-          "text": "No Reviews:\n" + noReviews,
-          "fallback": "No buttons for you!",
-          "callback_id": this.actions.NEEDS_REVIEW,
-          "color": "#0099ff",
-        },
-        {
-          "text": "Passing:\n" + passed,
-          "fallback": "No buttons for you!",
-          "callback_id": this.actions.NEEDS_REVIEW,
-          "color": "good"
-        },
-        {
-          "text": "Rejected:\n" + rejected,
-          "fallback": "No buttons for you!",
-          "callback_id": this.actions.NEEDS_REVIEW,
-          "color": "danger"
-        },
-        {
-          "text": "Rejected &amp; Passed:\n" + mixed,
-          "fallback": "No buttons for you!",
-          "callback_id": this.actions.NEEDS_REVIEW,
-          "color": "warning"
-        }
-      ]
+      "attachments": [{
+        "text": "No Reviews:\n" + noReviews,
+        "fallback": "No buttons for you!",
+        "callback_id": this.actions.NEEDS_REVIEW,
+        "color": "#0099ff",
+      }, {
+        "text": "Passing:\n" + passed,
+        "fallback": "No buttons for you!",
+        "callback_id": this.actions.NEEDS_REVIEW,
+        "color": "good"
+      }, {
+        "text": "Rejected:\n" + rejected,
+        "fallback": "No buttons for you!",
+        "callback_id": this.actions.NEEDS_REVIEW,
+        "color": "danger"
+      }, {
+        "text": "Rejected &amp; Passed:\n" + mixed,
+        "fallback": "No buttons for you!",
+        "callback_id": this.actions.NEEDS_REVIEW,
+        "color": "warning"
+      }]
     };
   }
 
@@ -181,56 +177,51 @@ exports.Bot = class ReviewBot {
    */
   newReview(payload, responseURL) {
     // No Comment Provided
-    if (!payload.text) return this.respond({text:"Need a comment for the review!"}, responseURL);
+    if (!payload.text) return this.respond({
+      text: "Need a comment for the review!"
+    }, responseURL);
     // Set Comment for User's Active Review
     this.reviews[payload.user_id] = {
       "comment": payload.text
     };
     // Formulate Message
     var message = {
-      "attachments": [
-        {
-          "text": `Choose a ticket to Review! :smile:\n - "${payload.text}"`,
-          "fallback": "No buttons for you!",
-          "callback_id": this.actions.NEW_REVIEW,
-          "color": "#6699ff",
-          "attachment_type": "default",
-          "actions": [
-            {
-              "name": "ticket",
-              "text": "Ticket",
-              "type": "select",
-              "data_source": "external"
-            },
-            {
-              "name": "pass",
-              "text": "Pass",
-              "type": "button",
-              "value": "pass",
-              "style": "primary"
-            },
-            {
-              "name": "reject",
-              "text": "Reject",
-              "type": "button",
-              "value": "reject",
-              "style": "danger"
-            },
-            {
-              "name": "cancel",
-              "text": "Cancel",
-              "type": "button",
-              "value": "cancel",
-              "confirm": {
-                "title": "Abort this Review?",
-                "text": "Don't leave me.",
-                "ok_text": "Yes",
-                "dismiss_text": "No"
-              }
-            }
-          ]
-        }
-      ],
+      "attachments": [{
+        "text": `Choose a ticket to Review! :smile:\n - "${payload.text}"`,
+        "fallback": "No buttons for you!",
+        "callback_id": this.actions.NEW_REVIEW,
+        "color": "#6699ff",
+        "attachment_type": "default",
+        "actions": [{
+          "name": "ticket",
+          "text": "Ticket",
+          "type": "select",
+          "data_source": "external"
+        }, {
+          "name": "pass",
+          "text": "Pass",
+          "type": "button",
+          "value": "pass",
+          "style": "primary"
+        }, {
+          "name": "reject",
+          "text": "Reject",
+          "type": "button",
+          "value": "reject",
+          "style": "danger"
+        }, {
+          "name": "cancel",
+          "text": "Cancel",
+          "type": "button",
+          "value": "cancel",
+          "confirm": {
+            "title": "Abort this Review?",
+            "text": "Don't leave me.",
+            "ok_text": "Yes",
+            "dismiss_text": "No"
+          }
+        }]
+      }],
       "replace_original": true
     }
     this.respond(message, responseURL);
@@ -245,7 +236,10 @@ exports.Bot = class ReviewBot {
    */
   userResponse(payload, responseURL) {
     // Empty Message
-    var message = { "text": "", "replace_original": false };
+    var message = {
+      "text": "",
+      "replace_original": false
+    };
     // Get Acvite Review
     var review = this.reviews[payload.user.id];
     // Handle Action
@@ -254,8 +248,9 @@ exports.Bot = class ReviewBot {
       // Set User's Active Review
       case "ticket":
         review.ticket = payload.actions[0].selected_options[0].value;
-        return; break;
-      // Pass or Reject Desired Ticket
+        return;
+        break;
+        // Pass or Reject Desired Ticket
       case "pass":
       case "reject":
         // The user has not yet selected a ticket
@@ -286,10 +281,16 @@ exports.Bot = class ReviewBot {
    * @param {Object} payload The parsed request body holding various information.
    * @param {string} responseURL The url to which responses should be sent.
    */
-  respond(payload, responseURL){
-    const options = { headers: { 'Content-type': 'application/json' } };
+  respond(payload, responseURL) {
+    const options = {
+      headers: {
+        'Content-type': 'application/json'
+      }
+    };
     axios.post(responseURL, payload, options)
       .then(res => { /* console.log(res); */ })
-      .catch(err => { console.log(err); })
+      .catch(err => {
+        console.log(err);
+      })
   }
 }
