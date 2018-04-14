@@ -1,4 +1,4 @@
-const JiraService = require('../services/JiraService')
+const JiraService = require('./services/JiraService')
 const SlackBot = require('slackbots');
 const Config = require('./config');
 
