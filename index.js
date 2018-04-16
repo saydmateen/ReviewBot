@@ -18,6 +18,7 @@ const urlencodedParser = bodyParser.urlencoded({
 app.post('/action', urlencodedParser, (req, res) => {
   bot.handleRequest(req, res, bot.actions.USER_RESPONSE);
 });
+
 // Endpoint for Attachemnt Options
 app.post('/options', urlencodedParser, (req, res) => {
   // Extract payload

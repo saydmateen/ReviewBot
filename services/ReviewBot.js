@@ -58,6 +58,7 @@ exports.Bot = class ReviewBot {
         break;
       case this.actions.NEEDS_REVIEW:
       case this.actions.MY_TICKETS:
+        this.respond({text:"Getting Tickets - be paitent!"}, responseURL);
         this.showTickets(payload, responseURL, action);
         break;
         // When a user responds to a question
@@ -174,8 +175,9 @@ exports.Bot = class ReviewBot {
     };
     // Formulate Message
     var message = {
+      "text": `Choose a ticket to Review! :smile:\n - "${payload.text}"`,
       "attachments": [{
-        "text": `Choose a ticket to Review! :smile:\n - "${payload.text}"`,
+        "text": "Jira takes a while here...",
         "fallback": "No buttons for you!",
         "callback_id": this.actions.NEW_REVIEW,
         "color": "#6699ff",
