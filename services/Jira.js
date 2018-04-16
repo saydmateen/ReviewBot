@@ -2,8 +2,6 @@ require('dotenv').config();
 const config = require('../config');
 const axios = require('axios');
 
-var comment = [];
-
 // Dummy Tickets
 const tickets = [{
   "key": "BPM-000",
@@ -38,7 +36,25 @@ const tickets = [{
  * 
  * @return {Promise} of object containting properly formatted options.
  */
-function getTicketOptions() {
+function getTicketOptions(email) {
+  return new Promise((fill, reject) => {
+    console.log("Jira => Fetching Options...");
+    getTicketsUnderReview().then(tickets => {
+      tickets = tickets.filter(ticket => {
+        return ticket.assignee !== email.toLowerCase();
+      });
+      var options = {
+        "options": tickets.map(t => {
+          return {
+            text: t.key,
+            value: t.key
+          };
+        })
+      }
+      fill(options);
+    }).catch(error => reject(error));
+  });
+
   return new Promise(function(fill, reject) {
     console.log("Jira => Fetching Options...");
     var options = {
@@ -59,9 +75,49 @@ function getTicketOptions() {
  * @return {Promise} of array containting properly formatted tickets.
  */
 function getTicketsUnderReview() {
+  console.log("Jira => Fetching Tickets Under Review...");
   return new Promise((fill, reject) => {
-    console.log("Jira => Fetching All Tickets...");
-    fill(tickets);
+    let keys = [];
+    getAllTickets()
+    .then(tickets => {
+      let allRequests = tickets.issues.map(issue => {
+        keys.push({ key: issue.key, assignee: issue.fields.assignee ? issue.fields.assignee.key : null});
+        return axios({
+          method: 'GET',
+          url: 'https://jira.powerschool.com/rest/api/2/issue/' + issue.key + "/comment",
+          responseType: 'application/json',
+          auth: {
+            username: process.env.EMAIL,
+            password: process.env.PASSWORD
+          }
+        });
+      });
+      
+      axios.all(allRequests)
+      .then(axios.spread((...issues) => {
+        let comments = [];
+        issues.map((issue, index) => {
+          let rejected = 0;
+          let accepted = 0;
+          issue.data.comments.map(c => {
+            if (c.body.toLowerCase().includes("accepted")) {
+              accepted = accepted + 1;
+            } else {
+              rejected = rejected + 1;
+            }
+          });
+          let entry = {
+            "key": keys[index].key,
+            "accepted": accepted,
+            "rejected": rejected,
+            "assignee": keys[index].assignee
+          }
+          comments.push(entry);
+        });
+        fill(comments);
+      })).catch(error => reject(error));
+    }).catch(error => reject(error));
+
   });
 }
 
@@ -70,10 +126,15 @@ function getTicketsUnderReview() {
  *
  * @return {Promise} of array containting properly formatted tickets.
  */
-function getMyTickets() {
+function getMyTickets(email) {
   return new Promise((fill, reject) => {
     console.log("Jira => Fetching My Tickets...");
-    fill(tickets);
+    getTicketsUnderReview().then(tickets => {
+      tickets = tickets.filter(ticket => {
+        return ticket.assignee === email.toLowerCase();
+      });
+      fill(tickets);
+    }).catch(error => reject(error));
   });
 }
 
@@ -84,64 +145,51 @@ function getMyTickets() {
  * @param {string} issue The Jira issue's KEY.
  * @param {string} comment The comment content for the review.
  */
-function addReview(pass, issue, comment) {
+function addReview(pass, issue, comment, email) {
   const action = pass ? 'Pass' : 'Reject';
-  console.log(`Jira => ${action}ing: ${issue} - "${comment}"`);
-}
-
-
-
-function NeedsReview() {
-  const jql = "project = " + config.PROJECT + " AND status = " + config.STATUS + " AND resolution = Unresolved&fields=key";
-  axios({
-      method: 'GET',
-      url: 'https://jira.powerschool.com/rest/api/2/search?jql=' + jql,
+  let fullComment = `${email} ${action}ed - "${comment}"`;
+  console.log(`Jira => ${fullComment}"`);
+  const url = 'https://jira.powerschool.com/rest/api/2/issue/' + issue + '/comment';
+  return new Promise((fill, reject) => {
+    axios({
+      method: 'POST',
+      url: url,
       responseType: 'application/json',
       auth: {
-        username: process.env.USERNAME,
+        username: process.env.EMAIL,
+        password: process.env.PASSWORD
+      },
+      data: {
+        body: fullComment
+      }
+    })
+      .then(response => fill(response.data))
+      .catch(error => reject(error.data))
+  });
+}
+
+function getAllTickets(){
+  console.log("Jira => Fetching All Tickets...");
+  const url = 'https://jira.powerschool.com/rest/api/2/search?jql=' + "project = " + config.PROJECT + " AND status = " + config.STATUS + " AND resolution = Unresolved&fields=key,assignee";
+  return new Promise((fill, reject) => {
+    axios({
+      method: 'GET',
+      url: url,
+      responseType: 'application/json',
+      auth: {
+        username: process.env.EMAIL,
         password: process.env.PASSWORD
       },
     })
-    .then(function(response) {
-      let data = response.data.issues;
-      data.map(issue => {
-        let rejected = 0;
-        let accepted = 0;
-        axios({
-            method: 'GET',
-            url: 'https://jira.powerschool.com/rest/api/2/issue/' + issue.key + "/comment",
-            responseType: 'application/json',
-            auth: {
-              username: process.env.USERNAME,
-              password: process.env.PASSWORD
-            },
-          })
-          .then(function(response) {
-            response.data.comments.map(c => {
-              //console.log(c);
-              if (c.body.toLowerCase().includes("accepted")) {
-                accepted = accepted + 1;
-              } else {
-                rejected = rejected + 1;
-              }
-            });
-            comment.push({
-              "key": issue.key,
-              "accepted": accepted,
-              "rejected": +rejected
-            });
-            console.log(comment);
-          })
-      });
-    })
-    .catch(function(error) {
-      console.log(error);
-    });
+    .then(response => fill(response.data))
+    .catch(error => reject(error.data))
+  });
 }
 
 module.exports = {
   getTicketOptions,
   getTicketsUnderReview,
   getMyTickets,
-  addReview
+  addReview,
+  getAllTickets
 }
