@@ -139,6 +139,45 @@ function getMyTickets(email) {
 }
 
 /**
+ * Closes Peer Review Sub Task in Jira.
+ *
+ * @return {Promise} of array containting properly formatted tickets.
+ */
+function CloseSubTask(key) {
+  return new Promise((fill, reject) => {
+    console.log("Jira => Closing Sub Task...");
+    getAllTickets().then(tickets => {
+      let id = null;
+      tickets.issues.filter(ticket => key === ticket.key).map(ticket => {
+        let subTask = ticket.fields.subtasks.filter(tasks => {
+          if (tasks.fields.issuetype.name === config.SUBTASK_NAME) {
+            id = tasks.id;
+          }
+        });
+      });
+      if(id != null){
+        let url = 'https://jira.powerschool.com/rest/api/2/issue/' + id + '/transitions';
+        axios({
+          method: 'POST',
+          url: url,
+          responseType: 'application/json',
+          auth: {
+            username: process.env.EMAIL,
+            password: process.env.PASSWORD
+          },
+          data: {
+            "transition": { "id": "2" } 
+          }
+        })
+          .then(response => fill(response.data))
+          .catch(error => reject(error.data))
+      }
+    })
+      .catch(error => reject(error));
+  });
+}
+
+/**
  * Adds a Review (comment) to Jira with desired information.
  * 
  * @param {bool} pass Indicates wether passing or rejecting.
@@ -170,7 +209,7 @@ function addReview(pass, issue, comment, email) {
 
 function getAllTickets(){
   console.log("Jira => Fetching All Tickets...");
-  const url = 'https://jira.powerschool.com/rest/api/2/search?jql=' + "project = " + config.PROJECT + " AND status = " + config.STATUS + " AND resolution = Unresolved&fields=key,assignee";
+  const url = 'https://jira.powerschool.com/rest/api/2/search?jql=' + "project = " + config.PROJECT + " AND status = " + config.STATUS + " AND resolution = Unresolved&fields=key,assignee,subtasks";
   return new Promise((fill, reject) => {
     axios({
       method: 'GET',
@@ -191,5 +230,6 @@ module.exports = {
   getTicketsUnderReview,
   getMyTickets,
   addReview,
-  getAllTickets
+  getAllTickets,
+  CloseSubTask
 }
