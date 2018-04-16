@@ -190,13 +190,8 @@ function addReview(pass, issue, comment, user) {
  * @return {Promise} of all tickets in desired column.
  */
 function getAllTickets(){
-<<<<<<< HEAD
   console.log("Jira => Fetching All Tickets...");
   const url = 'https://jira.powerschool.com/rest/api/2/search?jql=' + "project = " + config.PROJECT + " AND status = " + config.STATUS + " AND resolution = Unresolved&fields=key,assignee,subtasks";
-=======
-  //console.log("Jira => Fetching All Tickets...");
-  const url = 'https://jira.powerschool.com/rest/api/2/search?jql=' + "project = " + config.PROJECT + " AND status = " + config.STATUS + " AND resolution = Unresolved&fields=key,assignee";
->>>>>>> 3eb596196cac15518e3924ce040cffe774a2bccd
   return new Promise((fill, reject) => {
     axios({
       method: 'GET',
