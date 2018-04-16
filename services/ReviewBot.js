@@ -33,7 +33,7 @@ exports.Bot = class ReviewBot {
    */
   start() {
     this.bot.on('start', () => {
-      //this.bot.postMessageToChannel(config.CHANNEL_NAME, "I'm Here! :smile:");
+      this.bot.postMessageToChannel(config.CHANNEL_NAME, "I'm Here! :smile:");
     });
   }
 
@@ -58,6 +58,7 @@ exports.Bot = class ReviewBot {
         break;
       case this.actions.NEEDS_REVIEW:
       case this.actions.MY_TICKETS:
+        this.respond({text:"Getting Tickets - be patient!"}, responseURL);
         this.showTickets(payload, responseURL, action);
         break;
         // When a user responds to a question
@@ -85,24 +86,27 @@ exports.Bot = class ReviewBot {
     // Determine method
     switch (filter) {
       case this.actions.NEEDS_REVIEW:
-        ticketPromise = Jira.getTicketsUnderReview;
-        sFilter = "all";
+        ticketPromise = Jira.getTicketsUnderReview()
+        .then(tickets => {
+          var message = this.generateMessage(tickets);
+          message.text = `Here are all tickets under review!`;
+          this.respond(message, responseURL);
+        })
+        .catch(err => console.log(err));
         break;
       case this.actions.MY_TICKETS:
-        ticketPromise = Jira.getMyTickets;
-        sFilter = "your";
+        const email = `${payload.user_name}@${payload.team_domain}.com`;
+        Jira.getMyTickets(email)
+        .then(tickets => {
+          var message = this.generateMessage(tickets);
+          message.text = `Here are your tickets under review!`;
+          this.respond(message, responseURL);
+        })
+        .catch(err => console.log(err));
         break;
       default:
         return console.log("Ticket Filter unrecognized.");
     }
-    // Execute method
-    ticketPromise()
-      .then(tickets => {
-        var message = this.generateMessage(tickets);
-        message.text = `Here are ${sFilter} tickets under review!`;
-        this.respond(message, responseURL);
-      })
-      .catch(err => console.log(err));
   }
 
   /**
@@ -114,43 +118,33 @@ exports.Bot = class ReviewBot {
    */
   generateMessage(tickets) {
     // Tickets with 0 reviews
-    const noReviews = tickets.filter(t => {
-      return (t.pass === 0 && t.reject === 0);
-    }).map(t => {
-      return `<${config.JIRA_ISSUE_URL}/${t.key}|${t.key}>`;
-    }).join(', ');
+    const needs = tickets
+      .filter(t => t.accepted < config.REQUIRED_REVIEWS)
+      .map(t => `<${config.JIRA_ISSUE_URL}/${t.key}|${t.key}>`)
+      .join(', ');
 
     // Tickets with Passes
-    const passed = tickets.filter(t => {
-      return (t.pass > 0 && t.reject === 0);
-    }).map(t => {
-      return `<${config.JIRA_ISSUE_URL}/${t.key}|${t.key}>`;
-    }).join(', ');
+    const passed = tickets
+      .filter(t => t.accepted === config.REQUIRED_REVIEWS)
+      .map(t => `<${config.JIRA_ISSUE_URL}/${t.key}|${t.key}>`)
+      .join(', ');
 
     // Tickets with Rejections
-    const rejected = tickets.filter(t => {
-      return (t.reject > 0 && t.pass === 0);
-    }).map(t => {
-      return `<${config.JIRA_ISSUE_URL}/${t.key}|${t.key}>`;
-    }).join(', ');
-
-    // Tickets with Passes and Rejections
-    const mixed = tickets.filter(t => {
-      return (t.pass > 0 && t.reject > 0);
-    }).map(t => {
-      return `<${config.JIRA_ISSUE_URL}/${t.key}|${t.key}>`;
-    }).join(', ');
+    const rejected = tickets
+      .filter(t => t.rejected > 0 && t.accepted === 0)
+      .map(t => `<${config.JIRA_ISSUE_URL}/${t.key}|${t.key}>`)
+      .join(', ');
 
     // Formulate Message
     return {
       "text": "Here are the requested tickets under review!",
       "attachments": [{
-        "text": "No Reviews:\n" + noReviews,
+        "text": "Needs Review:\n" + needs,
         "fallback": "No buttons for you!",
         "callback_id": this.actions.NEEDS_REVIEW,
-        "color": "#0099ff",
+        "color": "warning",
       }, {
-        "text": "Passing:\n" + passed,
+        "text": "Passed:\n" + passed,
         "fallback": "No buttons for you!",
         "callback_id": this.actions.NEEDS_REVIEW,
         "color": "good"
@@ -159,11 +153,6 @@ exports.Bot = class ReviewBot {
         "fallback": "No buttons for you!",
         "callback_id": this.actions.NEEDS_REVIEW,
         "color": "danger"
-      }, {
-        "text": "Rejected &amp; Passed:\n" + mixed,
-        "fallback": "No buttons for you!",
-        "callback_id": this.actions.NEEDS_REVIEW,
-        "color": "warning"
       }]
     };
   }
@@ -178,7 +167,7 @@ exports.Bot = class ReviewBot {
   newReview(payload, responseURL) {
     // No Comment Provided
     if (!payload.text) return this.respond({
-      text: "Need a comment for the review!"
+      text: ":warning: Need a comment for the review!"
     }, responseURL);
     // Set Comment for User's Active Review
     this.reviews[payload.user_id] = {
@@ -186,8 +175,9 @@ exports.Bot = class ReviewBot {
     };
     // Formulate Message
     var message = {
+      "text": `Choose a ticket to Review! :smile:\n - "${payload.text}"`,
       "attachments": [{
-        "text": `Choose a ticket to Review! :smile:\n - "${payload.text}"`,
+        "text": "Jira takes a while here...",
         "fallback": "No buttons for you!",
         "callback_id": this.actions.NEW_REVIEW,
         "color": "#6699ff",
@@ -240,37 +230,37 @@ exports.Bot = class ReviewBot {
       "text": "",
       "replace_original": false
     };
-    // Get Acvite Review
-    var review = this.reviews[payload.user.id];
     // Handle Action
     const action = payload.actions[0].name;
     switch (action) {
       // Set User's Active Review
       case "ticket":
-        review.ticket = payload.actions[0].selected_options[0].value;
-        return;
+        return this.reviews[payload.user.id].ticket = payload.actions[0].selected_options[0].value;
         break;
         // Pass or Reject Desired Ticket
       case "pass":
       case "reject":
         // The user has not yet selected a ticket
+        const review = this.reviews[payload.user.id];
         if (!review.ticket) return;
         // Notify of intent to Pass/Reject
-        message.text = `${lo.capitalize(action)}ing: ${review.ticket} - "${review.comment}"`;
+        message.text = `${lo.capitalize(action)}ing: <${config.JIRA_ISSUE_URL}/${review.ticket}|${review.ticket}> - "${review.comment}"`;
         message.replace_original = true;
-        // Tell Jira to add Comment for Review
-        Jira.addReview(action === "pass", review.ticket, review.comment);
+        // Formulate Email
+        const name = `${lo.startCase(payload.user.name.split('.').join(' '))}`;
+        // Create Comment in Jira
+        Jira.addReview(action === "pass", review.ticket, review.comment, name);
         // Reset Review
-        review = {};
+        this.reviews[payload.user.id] = {};
         break;
       case "cancel":
         message.text = "No worries :v: I'll cancel that for you! :sunglasses:";
         message.replace_original = true;
-        review = {};
+        this.reviews[payload.user.id] = {};
         break;
       default:
         message.text = `${payload.user.name} clicked: ${action}`;
-        review = {};
+        this.reviews[payload.user.id] = {};
     }
     this.respond(message, responseURL);
   }
