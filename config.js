@@ -4,7 +4,6 @@ const config = {
   REQUIRED_REVIEWS: 2,
   REVIEW_COLUMN: 'Code Review',
   JIRA_ISSUE_URL: 'https://jira.powerschool.com/browse',
-  PROJECT: "BPY",
   STATUS: "\"Code Review\""
 }
 

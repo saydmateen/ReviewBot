@@ -58,7 +58,7 @@ exports.Bot = class ReviewBot {
         break;
       case this.actions.NEEDS_REVIEW:
       case this.actions.MY_TICKETS:
-        this.respond({text:"Getting Tickets - be paitent!"}, responseURL);
+        this.respond({text:"Getting Tickets - be patient!"}, responseURL);
         this.showTickets(payload, responseURL, action);
         break;
         // When a user responds to a question
@@ -244,12 +244,12 @@ exports.Bot = class ReviewBot {
         const review = this.reviews[payload.user.id];
         if (!review.ticket) return;
         // Notify of intent to Pass/Reject
-        message.text = `${lo.capitalize(action)}ing: ${review.ticket} - "${review.comment}"`;
+        message.text = `${lo.capitalize(action)}ing: <${config.JIRA_ISSUE_URL}/${review.ticket}|${review.ticket}> - "${review.comment}"`;
         message.replace_original = true;
         // Formulate Email
-        const email = `${payload.user.name}@${payload.team.domain}.com`;
+        const name = `${lo.startCase(payload.user.name.split('.').join(' '))}`;
         // Create Comment in Jira
-        Jira.addReview(action === "pass", review.ticket, review.comment, email);
+        Jira.addReview(action === "pass", review.ticket, review.comment, name);
         // Reset Review
         this.reviews[payload.user.id] = {};
         break;

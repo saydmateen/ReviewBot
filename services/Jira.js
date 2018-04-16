@@ -119,13 +119,13 @@ function getMyTickets(email) {
  * @param {bool} pass Indicates wether passing or rejecting.
  * @param {string} issue The Jira issue's KEY.
  * @param {string} comment The comment content for the review.
- * @param {string} email The email of the user submitting the review.
+ * @param {string} user The user submitting the review.
  * @return {Promise} of submitting comment to Jira.
  */
-function addReview(pass, issue, comment, email) {
+function addReview(pass, issue, comment, user) {
   const action = pass ? 'Accept' : 'Reject';
   // Construct comment
-  let fullComment = `${email} ${action}ed - "${comment}"`;
+  let fullComment = `${user} ${action}ed - "${comment}"`;
   const url = 'https://jira.powerschool.com/rest/api/2/issue/' + issue + '/comment';
   return new Promise((fill, reject) => {
     axios({
