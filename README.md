@@ -6,7 +6,9 @@ You will need various information from both Slack and Jira configured in your en
 ## Getting Started
 
 Navigate to the config.js and .env file and update all the required fields which will correspond to your particular enviroment setup. 
+
 For the .env the following needs to be configured:
+```
 CLIENT_ID=''
 CLIENT_SECRET=
 EMAIL=
@@ -14,6 +16,7 @@ PASSWORD=
 ACCESS_TOKEN=
 BOT_USER_ID=
 BOT_TOKEN=
+```
 
 ### Prerequisites
 
