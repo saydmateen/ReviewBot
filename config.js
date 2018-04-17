@@ -1,12 +1,11 @@
 const config = {
-  CHANNEL_NAME: 'review_bot',
-  PROJECT: 'BPY',
-  REQUIRED_REVIEWS: 2,
-  REVIEW_COLUMN: 'Code Review',
-  JIRA_ISSUE_URL: 'https://jira.powerschool.com/browse',
-  PROJECT: "BPY",
-  STATUS: "\"Code Review\"",
-  SUBTASK_NAME: "Peer Review"
+  CHANNEL_NAME: 'review_bot', //Slack Channel
+  PROJECT: 'BPY', // Jira Project 
+  REQUIRED_REVIEWS: 2, // Number of required reviews before a task is passed
+  REVIEW_COLUMN: 'Code Review', // Jira Column where the code review tasks are placed
+  JIRA_DOMAIN: 'https://jira.powerschool.com', // Jira Domain 
+  STATUS: "\"Code Review\"", // Jira task name 
+  SUBTASK_NAME: "Peer Review" // Jira subtask name 
 }
 
 module.exports = config;
