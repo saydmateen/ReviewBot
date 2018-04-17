@@ -44,7 +44,7 @@ function getTicketsUnderReview() {
       // Compose array of axios Promises to fetch comments for each issue.
       let allRequests = tickets.issues.map(issue => {
         // Add key and assignee to keys array.
-        keys.push({ key: issue.key, assignee: issue.fields.assignee ? issue.fields.assignee.key : null});
+        keys.push({ key: issue.key, assignee: issue.fields.assignee ? issue.fields.assignee.key : null, subtasks: issue.fields.subtasks ? issue.fields.subtasks : []});
         // Produce axios Promise
         return axios({
           method: 'GET',
@@ -80,7 +80,8 @@ function getTicketsUnderReview() {
             "key": keys[index].key,
             "accepted": accepted,
             "rejected": rejected,
-            "assignee": keys[index].assignee
+            "assignee": keys[index].assignee,
+            "subtasks": keys[index].subtasks
           }
           issueData.push(entry);
         });
@@ -118,35 +119,34 @@ function getMyTickets(email) {
  *
  * @return {Promise} of array containting properly formatted tickets.
  */
-function CloseSubTask(key) {
+function CloseSubTask() {
   return new Promise((fill, reject) => {
     console.log("Jira => Closing Sub Task...");
-    getAllTickets().then(tickets => {
-      let id = null;
-      tickets.issues.filter(ticket => key === ticket.key).map(ticket => {
-        let subTask = ticket.fields.subtasks.filter(tasks => {
-          if (tasks.fields.issuetype.name === config.SUBTASK_NAME) {
-            id = tasks.id;
-          }
+    let reviewIds = [];
+    getTicketsUnderReview().then(response => {
+      response.filter(task => task.subtasks !== undefined && task.subtasks.length != 0).map(task => {
+        task.subtasks.filter(subtask => task.accepted >= config.REQUIRED_REVIEWS && subtask.fields.issuetype.name === config.SUBTASK_NAME && !subtask.fields.status.name.toLowerCase().includes("closed")).map(subtask => { //Need to add check for two acceptances
+          reviewIds.push(subtask.id);
         });
       });
-      if(id != null){
-        let url = 'https://jira.powerschool.com/rest/api/2/issue/' + id + '/transitions';
-        axios({
-          method: 'POST',
-          url: url,
-          responseType: 'application/json',
-          auth: {
-            username: process.env.EMAIL,
-            password: process.env.PASSWORD
-          },
-          data: {
-            "transition": { "id": "2" } 
-          }
-        })
-          .then(response => fill(response.data))
-          .catch(error => reject(error.data))
-      }
+      let allRequests = reviewIds.map(id => {
+        return axios({
+            method: 'POST',
+            url: 'https://jira.powerschool.com/rest/api/2/issue/' + id + '/transitions',
+            responseType: 'application/json',
+            auth: {
+              username: process.env.EMAIL,
+              password: process.env.PASSWORD
+            },
+            data: {
+              "transition": { "id": "2" }
+            }
+          });
+      });
+      axios.all(allRequests)
+        .then(axios.spread((...response) => {
+          fill(response);
+        })).catch(error => reject(error));
     })
       .catch(error => reject(error));
   });

@@ -217,15 +217,6 @@ exports.Bot = class ReviewBot {
     this.respond(message, responseURL);
   }
 
-  showReminder() {
-    Jira.getTicketsUnderReview()
-    .then(tickets => {
-      const message = this.generateMessage(tickets);
-      this.bot.postMessageToChannel(config.CHANNEL_NAME, null, message);
-    })
-    .catch(err => console.log(err));
-  }
-
   /**
    * Handles requests that indicate user interaction with message.
    * 
