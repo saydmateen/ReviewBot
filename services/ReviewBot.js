@@ -124,19 +124,19 @@ exports.Bot = class ReviewBot {
     // Tickets with 0 reviews
     const needs = tickets
       .filter(t => t.accepted < config.REQUIRED_REVIEWS)
-      .map(t => `<${config.JIRA_ISSUE_URL}/${t.key}|${t.key}>`)
+      .map(t => `<${config.JIRA_DOMAIN}/browse/${t.key}|${t.key}>`)
       .join(', ');
 
     // Tickets with Passes
     const passed = tickets
       .filter(t => t.accepted === config.REQUIRED_REVIEWS)
-      .map(t => `<${config.JIRA_ISSUE_URL}/${t.key}|${t.key}>`)
+      .map(t => `<${config.JIRA_DOMAIN}/browse/${t.key}|${t.key}>`)
       .join(', ');
 
     // Tickets with Rejections
     const rejected = tickets
       .filter(t => t.rejected > 0 && t.accepted === 0)
-      .map(t => `<${config.JIRA_ISSUE_URL}/${t.key}|${t.key}>`)
+      .map(t => `<${config.JIRA_DOMAIN}/browse/${t.key}|${t.key}>`)
       .join(', ');
 
     // Formulate Message
@@ -255,7 +255,7 @@ exports.Bot = class ReviewBot {
         const review = this.reviews[payload.user.id];
         if (!review.ticket) return;
         // Notify of intent to Pass/Reject
-        message.text = `${lo.capitalize(action)}ing: <${config.JIRA_ISSUE_URL}/${review.ticket}|${review.ticket}> - "${review.comment}"`;
+        message.text = `${lo.capitalize(action)}ing: <${config.JIRA_DOMAIN}/browse/${review.ticket}|${review.ticket}> - "${review.comment}"`;
         message.replace_original = true;
         // Formulate Email
         const name = `${lo.startCase(payload.user.name.split('.').join(' '))}`;
