@@ -50,6 +50,10 @@ app.post('/slash/r-all', urlencodedParser, (req, res) => {
 app.post('/slash/r-mine', urlencodedParser, (req, res) => {
   bot.handleRequest(req, res, bot.actions.MY_TICKETS);
 })
+// Close all subtasks for cases that have been passed.
+app.post('/slash/r-close-subtasks', urlencodedParser, (req, res) => {
+  bot.handleRequest(req, res, bot.actions.CLOSE_SUBTASKS);
+})
 
 
 /* START SERVER */

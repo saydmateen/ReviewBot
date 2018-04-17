@@ -22,6 +22,7 @@ exports.Bot = class ReviewBot {
       NEW_REVIEW: 'NEW_REVIEW',
       MY_TICKETS: 'MY_TICKETS',
       USER_RESPONSE: 'USER_RESPONSE',
+      CLOSE_SUBTASKS: 'CLOSE_SUBTASKS',
     }
     this.reviews = {};
   }
@@ -66,8 +67,11 @@ exports.Bot = class ReviewBot {
         payload = JSON.parse(payload.payload);
         this.userResponse(payload, payload.response_url);
         break;
+      case this.actions.CLOSE_SUBTASKS:
+        this.closeSubtasks(payload.response_url);
+        break;
       default:
-        console.log("Unrecognized action in handleRequest");
+        console.log("Unrecognized action in handleRequest: " + action);
     }
   }
 
@@ -215,6 +219,13 @@ exports.Bot = class ReviewBot {
       "replace_original": true
     }
     this.respond(message, responseURL);
+  }
+
+  closeSubtasks(responseURL) {
+    this.respond({text:"Closing Subtasks for cases with " + config.REQUIRED_REVIEWS + " passing Reviews..."}, responseURL);
+    Jira.closeSubTask().then(res => {
+      this.respond({text:":heavy_check_mark: Closed " + res + " Subtasks!"}, responseURL);
+    });
   }
 
   /**

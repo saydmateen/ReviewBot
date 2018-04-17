@@ -119,9 +119,9 @@ function getMyTickets(email) {
  *
  * @return {Promise} of array containting properly formatted tickets.
  */
-function CloseSubTask() {
+function closeSubTask() {
   return new Promise((fill, reject) => {
-    console.log("Jira => Closing Sub Task...");
+    // console.log("Jira => Closing Sub Task...");
     let reviewIds = [];
     getTicketsUnderReview().then(response => {
       response.filter(task => task.subtasks !== undefined && task.subtasks.length != 0).map(task => {
@@ -145,7 +145,7 @@ function CloseSubTask() {
       });
       axios.all(allRequests)
         .then(axios.spread((...response) => {
-          fill(response);
+          fill(reviewIds.length);
         })).catch(error => reject(error));
     })
       .catch(error => reject(error));
@@ -212,5 +212,5 @@ module.exports = {
   getMyTickets,
   addReview,
   getAllTickets,
-  CloseSubTask
+  closeSubTask
 }
