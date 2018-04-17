@@ -33,7 +33,7 @@ exports.Bot = class ReviewBot {
    */
   start() {
     this.bot.on('start', () => {
-      this.bot.postMessageToChannel(config.CHANNEL_NAME, "I'm Here! :smile:");
+      this.bot.postMessageToChannel(config.CHANNEL_NAME, "Hello Friends! :smile:");
     });
   }
 
@@ -215,6 +215,15 @@ exports.Bot = class ReviewBot {
       "replace_original": true
     }
     this.respond(message, responseURL);
+  }
+
+  showReminder() {
+    Jira.getTicketsUnderReview()
+    .then(tickets => {
+      const message = this.generateMessage(tickets);
+      this.bot.postMessageToChannel(config.CHANNEL_NAME, null, message);
+    })
+    .catch(err => console.log(err));
   }
 
   /**
