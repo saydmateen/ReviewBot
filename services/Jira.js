@@ -12,19 +12,23 @@ const axios = require('axios');
  */
 function getTicketOptions(email) {
   return new Promise((fill, reject) => {
-    //console.log("Jira => Fetching Options...");
-    // Get All Tickets Under Review
     getTicketsUnderReview()
-    .then(tickets => {
-      // Select tickets that do no belong to requresting user
-      const options = {
-        "options": tickets
-          .filter(t => t.assignee!==email.toLowerCase())
-          .map(t => {return{text: t.key, value: t.key}})
-      }
-      fill(options);
-    })
-    .catch(error => reject(error));
+      .then(tickets => {
+        // Tickets that do no belong to requesting User
+        const options = {
+          "options": tickets
+            .filter(ticket => ticket.assignee !== email.toLowerCase())
+            .map(ticket => {
+              return {
+                text: ticket.key,
+                value: ticket.key
+              }
+            })
+        };
+        // Fulfill Promise
+        fill(options);
+      })
+      .catch(err => reject(err));
   });
 }
 
@@ -34,61 +38,63 @@ function getTicketOptions(email) {
  * @return {Promise} of array containting properly formatted tickets.
  */
 function getTicketsUnderReview() {
-  //console.log("Jira => Fetching Tickets Under Review...");
   return new Promise((fill, reject) => {
-    // Array of objects with issue data necessary from first query.
+    // Array of objects containing issue data.
     let keys = [];
-    // Get All Tickets to begin with
+    // Get All Tickets
     getAllTickets()
-    .then(tickets => {
-      // Compose array of axios Promises to fetch comments for each issue.
-      let allRequests = tickets.issues.map(issue => {
-        // Add key and assignee to keys array.
-        keys.push({ key: issue.key, assignee: issue.fields.assignee ? issue.fields.assignee.key : null, subtasks: issue.fields.subtasks ? issue.fields.subtasks : []});
-        // Produce axios Promise
-        return axios({
-          method: 'GET',
-          url: 'https://jira.powerschool.com/rest/api/2/issue/' + issue.key + "/comment",
-          responseType: 'application/json',
-          auth: {
-            username: process.env.EMAIL,
-            password: process.env.PASSWORD
-          }
-        });
-      });
-      
-      // Execute all Promises simultaneously.
-      axios.all(allRequests)
-      // Handle each issue's comments accordingly
-      .then(axios.spread((...issues) => {
-        // Array of data about the issue's comments
-        let issueData = [];
-        issues.map((issue, index) => {
-          // Count of how many comments indicate acceptance or rejection
-          let rejected = 0;
-          let accepted = 0;
-          // Determine if comment is acceptance or rejection
-          issue.data.comments.map(c => {
-            if (c.body.toLowerCase().includes("accepted")) {
-              accepted = accepted + 1;
-            } else {
-              rejected = rejected + 1;
+      .then(tickets => {
+        // Compose array of axios Promises to fetch comments for each issue.
+        const allRequests = tickets.issues.map(issue => {
+          // Add key and assignee to keys array.
+          keys.push({
+            key: issue.key,
+            assignee: issue.fields.assignee ? issue.fields.assignee.key : null,
+            subtasks: issue.fields.subtasks ? issue.fields.subtasks : []
+          });
+          // Produce axios Promise
+          return axios({
+            method: 'GET',
+            url: `${config.JIRA_API_URL}/issue/${issue.key}/comment`,
+            responseType: 'application/json',
+            auth: {
+              username: process.env.EMAIL,
+              password: process.env.PASSWORD
             }
           });
-          // Construct object with data about issue
-          let entry = {
-            "key": keys[index].key,
-            "accepted": accepted,
-            "rejected": rejected,
-            "assignee": keys[index].assignee,
-            "subtasks": keys[index].subtasks
-          }
-          issueData.push(entry);
         });
-        // Fulfill Promise
-        fill(issueData);
-      })).catch(error => reject(error));
-    }).catch(error => reject(error));
+
+        // Execute all Promises simultaneously.
+        axios.all(allRequests)
+          // Handle each issue's comments accordingly
+          .then(axios.spread((...issues) => {
+            // Array of data about the issue's comments
+            const issueData = issues.map((issue, index) => {
+              let rejected = 0;
+              let accepted = 0;
+              // Determine if comment is Pass or Rejection
+              issue.data.comments.map(c => {
+                if (c.body.toLowerCase().includes("accepted")) {
+                  accepted = accepted + 1;
+                } else {
+                  rejected = rejected + 1;
+                }
+              });
+              // Construct Issue Data Object
+              return {
+                "key": keys[index].key,
+                "accepted": accepted,
+                "rejected": rejected,
+                "assignee": keys[index].assignee,
+                "subtasks": keys[index].subtasks
+              }
+            });
+            // Fulfill Promise
+            fill(issueData);
+          }))
+          .catch(err => reject(err));
+      })
+      .catch(err => reject(err));
   });
 }
 
@@ -102,60 +108,74 @@ function getMyTickets(email) {
   return new Promise((fill, reject) => {
     //console.log("Jira => Fetching My Tickets...");
     getTicketsUnderReview()
-    .then(tickets => {
-      // Filter by current user.
-      tickets = tickets.filter(t => {
-        return t.assignee === email.toLowerCase();
-      });
-      // Fulfill Promise
-      fill(tickets);
-    })
-    .catch(error => reject(error));
+      .then(tickets => {
+        // Filter by current user.
+        tickets = tickets.filter(t => {
+          return t.assignee === email.toLowerCase();
+        });
+        // Fulfill Promise
+        fill(tickets);
+      })
+      .catch(error => reject(error));
   });
 }
 
 /**
  * Closes Peer Review Sub Task in Jira.
  *
- * @return {Promise} of array containting properly formatted tickets.
+ * @return {Promise} of how many subtasks were closed.
  */
-function closeSubTask() {
+function closeSubtasks() {
   return new Promise((fill, reject) => {
-    // console.log("Jira => Closing Sub Task...");
-    let reviewIds = [];
-    getTicketsUnderReview().then(response => {
-      response.filter(task => task.subtasks !== undefined && task.subtasks.length != 0).map(task => {
-        task.subtasks.filter(subtask => task.accepted >= config.REQUIRED_REVIEWS && subtask.fields.issuetype.name === config.SUBTASK_NAME && !subtask.fields.status.name.toLowerCase().includes("closed")).map(subtask => { //Need to add check for two acceptances
-          reviewIds.push(subtask.id);
-        });
-      });
-      let allRequests = reviewIds.map(id => {
-        return axios({
+    getTicketsUnderReview()
+      .then(res => {
+        let subtaskIDs = [];
+        // Determine which issues have subtasks
+        res.filter(issue => issue.subtasks
+            && issue.subtasks.length > 0
+            && issue.accepted >= config.REQUIRED_REVIEWS)
+          .map(issue => {
+            // Determine which subtasks are applicable
+            issue.subtasks.map(subtask => {
+              if (subtask.fields.issuetype.name === config.SUBTASK_NAME
+                  && !subtask.fields.status.name.toLowerCase().includes('closed')) {
+                subtaskIDs.push(subtask.id);
+              }
+            });
+          });
+
+        // Build request to close all applicable subtasks
+        const allRequests = subtaskIDs.map(id => {
+          return axios({
             method: 'POST',
-            url: 'https://jira.powerschool.com/rest/api/2/issue/' + id + '/transitions',
+            url: `${config.JIRA_API_URL}/issue/${id}/transitions`,
             responseType: 'application/json',
             auth: {
               username: process.env.EMAIL,
               password: process.env.PASSWORD
             },
             data: {
-              "transition": { "id": "2" }
+              "transition": {
+                "id": "2"
+              }
             }
           });
-      });
-      axios.all(allRequests)
-        .then(axios.spread((...response) => {
-          fill(reviewIds.length);
-        })).catch(error => reject(error));
-    })
-      .catch(error => reject(error));
+        });
+
+        // Close all applicable subtasks
+        axios.all(allRequests)
+          .then(axios.spread((...res) => fill(subtaskIDs.length)))
+          .catch(err => reject(err));
+      })
+      .catch(err => reject(err));
   });
-}
+};
+
 
 /**
  * Adds a Review (comment) to Jira with desired information.
  * 
- * @param {bool} pass Indicates wether passing or rejecting.
+ * @param {bool} pass Indicates whether passing or rejecting.
  * @param {string} issue The Jira issue's KEY.
  * @param {string} comment The comment content for the review.
  * @param {string} user The user submitting the review.
@@ -164,23 +184,24 @@ function closeSubTask() {
 function addReview(pass, issue, comment, user) {
   const action = pass ? 'Accept' : 'Reject';
   // Construct comment
-  let fullComment = `${user} ${action}ed - "${comment}"`;
-  const url = 'https://jira.powerschool.com/rest/api/2/issue/' + issue + '/comment';
+  const fullComment = `${user} ${action}ed - "${comment}"`;
+  // Construct URL
+  const url = `${config.JIRA_API_URL}/issue/${issue}/comment`;
   return new Promise((fill, reject) => {
     axios({
-      method: 'POST',
-      url: url,
-      responseType: 'application/json',
-      auth: {
-        username: process.env.EMAIL,
-        password: process.env.PASSWORD
-      },
-      data: {
-        body: fullComment
-      }
-    })
-    .then(response => fill(response.data))
-    .catch(error => reject(error.data))
+        method: 'POST',
+        url: url,
+        responseType: 'application/json',
+        auth: {
+          username: process.env.EMAIL,
+          password: process.env.PASSWORD
+        },
+        data: {
+          body: fullComment
+        }
+      })
+      .then(res => fill(res.data))
+      .catch(err => reject(err.data));
   });
 }
 
@@ -189,20 +210,35 @@ function addReview(pass, issue, comment, user) {
  *
  * @return {Promise} of all tickets in desired column.
  */
-function getAllTickets(){
-  const url = 'https://jira.powerschool.com/rest/api/2/search?jql=' + "project = " + config.PROJECT + " AND status = " + config.STATUS + " AND resolution = Unresolved&fields=key,assignee,subtasks";
+function getAllTickets() {
+  // JQL Parameters
+  var params = {
+    project: config.PROJECT,
+    status: config.STATUS,
+    resolution: 'Unresolved'
+  };
+  params = Object.keys(params)
+    .map(p => `${p}=${params[p]}`)
+    .join(' AND ');
+  // JQL Fields
+  const fields = ['key', 'assignee', 'subtasks'].join(',');
+
+  // Construct URL
+  const url = `${config.JIRA_API_URL}/search?jql=${params}&fields=${fields}`;
+
+  // Fire Request 
   return new Promise((fill, reject) => {
     axios({
-      method: 'GET',
-      url: url,
-      responseType: 'application/json',
-      auth: {
-        username: process.env.EMAIL,
-        password: process.env.PASSWORD
-      },
-    })
-    .then(response => fill(response.data))
-    .catch(error => reject(error.data))
+        method: 'GET',
+        url: url,
+        responseType: 'application/json',
+        auth: {
+          username: process.env.EMAIL,
+          password: process.env.PASSWORD
+        },
+      })
+      .then(response => fill(response.data))
+      .catch(error => reject(error.data));
   });
 }
 
@@ -212,5 +248,5 @@ module.exports = {
   getMyTickets,
   addReview,
   getAllTickets,
-  closeSubTask
+  closeSubtasks
 }

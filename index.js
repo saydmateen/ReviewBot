@@ -58,6 +58,6 @@ app.post('/slash/r-close-subtasks', urlencodedParser, (req, res) => {
 
 /* START SERVER */
 bot.start();
-app.listen(3000, function() {
-  console.log('Listening on 3000');
+app.listen(process.env.PORT, function() {
+  console.log('ReviewBot is listening on port ' + process.env.PORT);
 });

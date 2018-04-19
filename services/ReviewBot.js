@@ -13,10 +13,12 @@ exports.Bot = class ReviewBot {
    * @constructor
    */
   constructor() {
+    // SlackBot
     this.bot = new SlackBot({
       token: process.env.BOT_TOKEN,
       as_user: true
     });
+    // Action Constants
     this.actions = {
       NEEDS_REVIEW: 'NEEDS_REVIEW',
       NEW_REVIEW: 'NEW_REVIEW',
@@ -24,11 +26,12 @@ exports.Bot = class ReviewBot {
       USER_RESPONSE: 'USER_RESPONSE',
       CLOSE_SUBTASKS: 'CLOSE_SUBTASKS',
     }
+    // Temp storage for review information.
     this.reviews = {};
   }
 
   /**
-   * Run once the bot establishes connection.
+   * Runs once the bot establishes connection.
    * 
    * @this {ReviewBot}
    */
@@ -53,16 +56,16 @@ exports.Bot = class ReviewBot {
     var responseURL = payload.response_url;
     // Determine Action to take
     switch (action) {
-      // Slash Commands
       case this.actions.NEW_REVIEW:
         this.newReview(payload, responseURL);
         break;
       case this.actions.NEEDS_REVIEW:
       case this.actions.MY_TICKETS:
-        this.respond({text:"Getting Tickets - be patient!"}, responseURL);
+        this.respond({
+          text: "Getting Tickets - be patient!"
+        }, responseURL);
         this.showTickets(payload, responseURL, action);
         break;
-        // When a user responds to a question
       case this.actions.USER_RESPONSE:
         payload = JSON.parse(payload.payload);
         this.userResponse(payload, payload.response_url);
@@ -91,25 +94,25 @@ exports.Bot = class ReviewBot {
     switch (filter) {
       case this.actions.NEEDS_REVIEW:
         ticketPromise = Jira.getTicketsUnderReview()
-        .then(tickets => {
-          var message = this.generateMessage(tickets);
-          message.text = `Here are all tickets under review!`;
-          this.respond(message, responseURL);
-        })
-        .catch(err => console.log(err));
+          .then(tickets => {
+            var message = this.generateMessage(tickets);
+            message.text = `Here are all tickets under review!`;
+            this.respond(message, responseURL);
+          })
+          .catch(err => console.log(err));
         break;
       case this.actions.MY_TICKETS:
         const email = `${payload.user_name}@${payload.team_domain}.com`;
         Jira.getMyTickets(email)
-        .then(tickets => {
-          var message = this.generateMessage(tickets);
-          message.text = `Here are your tickets under review!`;
-          this.respond(message, responseURL);
-        })
-        .catch(err => console.log(err));
+          .then(tickets => {
+            var message = this.generateMessage(tickets);
+            message.text = `Here are your tickets under review!`;
+            this.respond(message, responseURL);
+          })
+          .catch(err => console.log(err));
         break;
       default:
-        return console.log("Ticket Filter unrecognized.");
+        return console.log("Ticket Filter unrecognized: " + filter);
     }
   }
 
@@ -222,9 +225,13 @@ exports.Bot = class ReviewBot {
   }
 
   closeSubtasks(responseURL) {
-    this.respond({text:"Closing Subtasks for cases with " + config.REQUIRED_REVIEWS + " passing Reviews..."}, responseURL);
+    this.respond({
+      text: "Closing Subtasks for cases with " + config.REQUIRED_REVIEWS + " passing Reviews..."
+    }, responseURL);
     Jira.closeSubTask().then(res => {
-      this.respond({text:":heavy_check_mark: Closed " + res + " Subtasks!"}, responseURL);
+      this.respond({
+        text: ":heavy_check_mark: Closed " + res + " Subtasks!"
+      }, responseURL);
     });
   }
 

@@ -4,6 +4,7 @@ const config = {
   REQUIRED_REVIEWS: 2, // Number of required reviews before a task is passed
   REVIEW_COLUMN: 'Code Review', // Jira Column where the code review tasks are placed
   JIRA_DOMAIN: 'https://jira.powerschool.com', // Jira Domain 
+  JIRA_API_URL: 'https://jira.powerschool.com/rest/api/2', // API URL for Jira
   STATUS: "\"Code Review\"", // Jira task name 
   SUBTASK_NAME: "Peer Review" // Jira subtask name 
 }
