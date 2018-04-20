@@ -16,6 +16,7 @@ PASSWORD=
 ACCESS_TOKEN=
 BOT_USER_ID=
 BOT_TOKEN=
+PORT=
 ```
 
 ### Prerequisites
